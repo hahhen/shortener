@@ -1,38 +1,103 @@
+"use client"
+
 import FetchDataSteps from "@/components/tutorial/fetch-data-steps";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/client";
 import { InfoIcon } from "lucide-react";
 import { redirect } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { Button } from "@/components/ui/button"
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { toast } from "sonner";
 
-export default async function ProtectedPage() {
-  const supabase = await createClient();
+const formSchema = z.object({
+  originalLink: z.string().min(2),
+  newLink: z.string().min(2)
+})
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export default function ProtectedPage() {
+  const supabase = createClient();
 
-  if (!user) {
-    return redirect("/sign-in");
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      originalLink: "",
+      newLink: "",
+    },
+  })
+
+  // 2. Define a submit handler.
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      await fetch("/api/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(values),
+      }).then(async (res: any) => {
+        const jsonRes = await res.json()
+        if (jsonRes.success) {
+          toast("Success" + JSON.stringify(jsonRes))
+        } else if (jsonRes.success == false) {
+          toast("Error" + JSON.stringify(jsonRes))
+        } else {
+          toast("Unknown error")
+        }
+      })
+    } catch (error) {
+      toast("Error" + error)
+    }
   }
 
   return (
-    <div className="flex-1 w-full flex flex-col gap-12">
-      <div className="w-full">
-        <div className="bg-accent text-sm p-3 px-5 rounded-md text-foreground flex gap-3 items-center">
-          <InfoIcon size="16" strokeWidth={2} />
-          This is a protected page that you can only see as an authenticated
-          user
-        </div>
-      </div>
-      <div className="flex flex-col gap-2 items-start">
-        <h2 className="font-bold text-2xl mb-4">Your user details</h2>
-        <pre className="text-xs font-mono p-3 rounded border max-h-32 overflow-auto">
-          {JSON.stringify(user, null, 2)}
-        </pre>
-      </div>
-      <div>
-        <h2 className="font-bold text-2xl mb-4">Next steps</h2>
-        <FetchDataSteps />
-      </div>
-    </div>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <FormField
+          control={form.control}
+          name="originalLink"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Original link</FormLabel>
+              <FormControl>
+                <Input placeholder="shadcn" {...field} />
+              </FormControl>
+              <FormDescription>
+                Input full URL.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="newLink"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>New link</FormLabel>
+              <FormControl>
+                <Input placeholder="shadcn" {...field} />
+              </FormControl>
+              <FormDescription>
+                Input URL after the slash only.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit">Submit</Button>
+      </form>
+    </Form>
   );
 }
