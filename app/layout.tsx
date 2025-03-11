@@ -7,6 +7,7 @@ import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import Link from "next/link";
 import { Toaster } from "@/components/ui/sonner"
+import { Analytics } from "@vercel/analytics/react"
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -73,6 +74,7 @@ export default function RootLayout({
           </main>
           <Toaster />
         </ThemeProvider>
+        <Analytics/>
       </body>
     </html>
   );
